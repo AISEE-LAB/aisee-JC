@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 · 倍率监测{% endblock %}
+
+{% block content %}
+<h1 class="page-title" id="page-title">仪表盘</h1>
+
+<!-- ========== 全局视角：所有站点概览 ========== -->
+<div id="overview-mode">
+  <div class="toolbar">
+    <button class="btn" id="btn-fetch-all">立即抓取全部</button>
+    <span class="muted" id="overview-next-run"></span>
+  </div>
+
+  <!-- 全局统计 -->
+  <div class="card-grid" id="overview-stats"></div>
+
+  <!-- 站点卡片 -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>所有站点</h2>
+      <a class="link" href="/config">+ 添加站点</a>
+    </div>
+    <div class="panel-body no-pad">
+      <div id="sites-cards"></div>
+    </div>
+  </div>
+
+  <!-- 全局最近变更 -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>最近变更（所有站点）</h2>
+      <a class="link" href="/changes">查看全部 →</a>
+    </div>
+    <div class="panel-body">
+      <div id="overview-recent-changes"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 单站点视角 ========== -->
+<div id="single-mode" class="hidden">
+  <div class="row gap" style="margin: 8px 0 20px; flex-wrap: wrap;">
+    <div class="card">
+      <div class="card-label">站点</div>
+      <div class="card-value" id="card-site">—</div>
+      <div class="card-sub" id="card-group">分组：—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">模型总数</div>
+      <div class="card-value" id="card-models">—</div>
+      <div class="card-sub" id="card-fetched">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">最近变化</div>
+      <div class="card-value" id="card-changes">—</div>
+      <div class="card-sub">24h：<span id="card-changes-24h">—</span></div>
+    </div>
+    <div class="card">
+      <div class="card-label">启用通知渠道</div>
+      <div class="card-value" id="card-channels">—</div>
+      <div class="card-sub" id="card-channels-list">—</div>
+    </div>
+  </div>
+
+  <div class="row gap" style="margin: 20px 0;">
+    <div class="countdown-box">
+      <span class="countdown-label">下次抓取</span>
+      <span class="countdown-time" id="countdown">—</span>
+    </div>
+    <button class="btn btn-primary" id="btn-fetch">立即抓取该站点</button>
+    <button class="btn" id="btn-test">测试通知</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>抓取状态</h2></div>
+    <div class="panel-body" id="fetch-health">—</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>最近变更</h2>
+      <a class="link" href="/changes">查看全部 →</a>
+    </div>
+    <div class="panel-body">
+      <div id="recent-changes"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>最近通知</h2></div>
+    <div class="panel-body">
+      <div id="recent-notifications"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.PAGE = "dashboard";</script>
+{% endblock %}

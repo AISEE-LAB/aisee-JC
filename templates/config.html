@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}配置 · 倍率监测{% endblock %}
+
+{% block content %}
+<h1 class="page-title">配置</h1>
+<p class="page-sub">
+  支持多个中转站。左侧选择站点编辑，凭证字段显示 <span class="badge badge-set">已配置</span> 时留空表示「不修改」。
+</p>
+
+<div id="config-warning" class="alert alert-warn hidden">
+  未发现 <code>config.yaml</code>，使用模板默认值。填写后保存即可。
+</div>
+
+<form id="config-form" style="display:flex;gap:16px;align-items:flex-start;">
+
+  <!-- 左侧：站点列表 -->
+  <div class="panel" style="width:260px;flex-shrink:0;">
+    <div class="panel-head" style="justify-content:space-between;">
+      <h2>站点</h2>
+      <button type="button" class="btn btn-primary" id="btn-add-site" style="padding:3px 10px;font-size:12px;">+ 新增</button>
+    </div>
+    <div class="panel-body no-pad" id="site-list"></div>
+  </div>
+
+  <!-- 新增站点内嵌表单（默认隐藏） -->
+  <div id="add-site-box" class="modal hidden">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-box" style="max-width:420px;">
+      <div class="modal-head">
+        <h3>添加新站点</h3>
+        <button class="modal-close" data-close>×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>站点地址 base_url <span class="hint">必填，如 https://api.example.com</span></label>
+          <input type="text" class="input" id="new-base-url" placeholder="https://api.example.com">
+        </div>
+        <div class="form-row">
+          <label>系统类型</label>
+          <select class="input" id="new-system">
+            <option value="newapi">New API / One API</option>
+            <option value="qapi">QAPI / sub2api</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>显示名 <span class="hint">可选，留空用地址</span></label>
+          <input type="text" class="input" id="new-name" placeholder="主站">
+        </div>
+        <div class="row gap" style="margin-top:18px;">
+          <button type="button" class="btn btn-primary" id="btn-confirm-add-site">确认添加</button>
+          <button type="button" class="btn" data-close>取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧：编辑表单 -->
+  <div class="panel" style="flex:1;min-width:0;" id="site-form-area">
+    <div class="panel-head"><h2>站点配置</h2></div>
+    <div class="panel-body">
+
+      <div class="form-row-grid">
+        <div class="form-row">
+          <label>显示名 name</label>
+          <input type="text" class="input" data-field="name" placeholder="主站">
+        </div>
+        <div class="form-row">
+          <label>系统类型 system</label>
+          <select class="input" data-field="system">
+            <option value="newapi">New API / One API</option>
+            <option value="qapi">QAPI / sub2api</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>站点地址 base_url <span class="hint">末尾不带 /</span></label>
+        <input type="text" class="input" data-field="base_url" placeholder="https://api.example.com">
+      </div>
+      <div class="form-row">
+        <label>站点 ID <span class="hint">自动从 URL 生成，一般不改</span></label>
+        <input type="text" class="input" data-field="id" placeholder="自动生成">
+      </div>
+
+      <!-- New API 凭证 -->
+      <div class="cred-group" data-system="newapi">
+        <div class="form-row">
+          <label>access_token <span class="hint">New API 系统访问令牌</span></label>
+          <input type="password" class="input" data-field="access_token" placeholder="留空不修改">
+        </div>
+        <div class="form-row">
+          <label>或 session_cookie</label>
+          <input type="password" class="input" data-field="session_cookie" placeholder="留空不修改">
+        </div>
+      </div>
+
+      <!-- QAPI 凭证 -->
+      <div class="cred-group" data-system="qapi">
+        <div class="form-row">
+          <label>登录邮箱 email</label>
+          <input type="text" class="input" data-field="email" placeholder="you@example.com">
+        </div>
+        <div class="form-row">
+          <label>登录密码 password</label>
+          <input type="password" class="input" data-field="password" placeholder="留空不修改">
+        </div>
+        <div class="form-row">
+          <label>API Key（可选，看模型清单）</label>
+          <input type="password" class="input" data-field="api_key" placeholder="sk-xxx，留空不修改">
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">
+
+      <h3 style="margin:0 0 14px;font-size:14px;">监测策略</h3>
+      <div class="form-row-grid">
+        <div class="form-row">
+          <label>抓取间隔(分钟)</label>
+          <input type="number" class="input" data-field="monitor.interval_minutes">
+        </div>
+        <div class="form-row">
+          <label>变化阈值(%) <span class="hint">0=任何变化都报</span></label>
+          <input type="number" step="0.1" class="input" data-field="monitor.change_threshold_pct">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>关注分组 <span class="hint">逗号分隔，留空=全部</span></label>
+        <input type="text" class="input" data-field="monitor.watch_groups" placeholder="codex,kiro">
+      </div>
+      <div class="form-row">
+        <label>关注模型 <span class="hint">逗号分隔，前缀匹配，留空=全部</span></label>
+        <input type="text" class="input" data-field="monitor.watch_models" placeholder="gpt-4o,claude">
+      </div>
+      <div class="form-row">
+        <label class="checkbox">
+          <input type="checkbox" data-field="monitor.notify_on_first_run">
+          <span>首次抓取发送确认通知</span>
+        </label>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">
+
+      <h3 style="margin:0 0 14px;font-size:14px;">通知渠道</h3>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.serverchan.enabled"><span>Server 酱（微信）</span></label></legend>
+        <div class="form-row"><label>SendKey</label><input type="password" class="input" data-field="notify.serverchan.sendkey" placeholder="留空不修改"></div>
+      </fieldset>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.telegram.enabled"><span>Telegram</span></label></legend>
+        <div class="form-row"><label>Bot Token</label><input type="password" class="input" data-field="notify.telegram.bot_token" placeholder="留空不修改"></div>
+        <div class="form-row"><label>Chat ID</label><input type="text" class="input" data-field="notify.telegram.chat_id"></div>
+      </fieldset>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.wecom.enabled"><span>企业微信群机器人</span></label></legend>
+        <div class="form-row"><label>Webhook</label><input type="password" class="input" data-field="notify.wecom.webhook" placeholder="留空不修改"></div>
+      </fieldset>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.dingtalk.enabled"><span>钉钉群机器人</span></label></legend>
+        <div class="form-row"><label>Webhook</label><input type="password" class="input" data-field="notify.dingtalk.webhook" placeholder="留空不修改"></div>
+        <div class="form-row"><label>加签 Secret（可选）</label><input type="password" class="input" data-field="notify.dingtalk.secret" placeholder="留空不修改"></div>
+      </fieldset>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.email.enabled"><span>邮件 SMTP</span></label></legend>
+        <div class="form-row-grid">
+          <div class="form-row"><label>SMTP 主机</label><input type="text" class="input" data-field="notify.email.smtp_host"></div>
+          <div class="form-row"><label>SMTP 端口</label><input type="number" class="input" data-field="notify.email.smtp_port"></div>
+        </div>
+        <div class="form-row-grid">
+          <div class="form-row"><label>发件邮箱</label><input type="text" class="input" data-field="notify.email.smtp_user"></div>
+          <div class="form-row"><label>SSL</label><select class="input" data-field="notify.email.smtp_ssl" data-bool><option value="true">是</option><option value="false">否</option></select></div>
+        </div>
+        <div class="form-row"><label>授权码</label><input type="password" class="input" data-field="notify.email.smtp_pass" placeholder="留空不修改"></div>
+        <div class="form-row"><label>收件人（逗号分隔）</label><input type="text" class="input" data-field="notify.email.to_addrs" placeholder="a@x.com,b@y.com"></div>
+      </fieldset>
+
+    </div>
+  </div>
+</form>
+
+<div class="sticky-actions">
+  <button type="button" class="btn btn-primary" id="btn-save-config">保存配置</button>
+  <button type="button" class="btn" id="btn-reload-config">放弃修改</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.PAGE = "config";</script>
+{% endblock %}

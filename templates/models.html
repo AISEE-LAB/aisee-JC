@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}倍率表格 · 倍率监测{% endblock %}
+
+{% block content %}
+<h1 class="page-title">倍率表格</h1>
+<p class="page-sub">基于最近一次成功抓取，红色徽章表示该模型最近发生过变化。</p>
+
+<div class="toolbar">
+  <input type="text" id="search-input" class="input" placeholder="搜索模型名（如 gpt-4o）…">
+  <select id="sort-select" class="input">
+    <option value="name">按名称</option>
+    <option value="ratio">按倍率</option>
+    <option value="changed">按最近变化</option>
+  </select>
+  <button class="btn" id="btn-refresh-models">刷新</button>
+  <span class="muted" id="model-count"></span>
+</div>
+
+<div class="panel">
+  <div class="panel-body no-pad">
+    <table class="data-table" id="models-table">
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th class="num">倍率</th>
+          <th class="num">补全倍率</th>
+          <th class="num">固定价格</th>
+          <th class="num">分组倍率</th>
+          <th>最近变化</th>
+          <th class="col-action">趋势</th>
+        </tr>
+      </thead>
+      <tbody id="models-tbody">
+        <tr><td colspan="7" class="empty">加载中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.PAGE = "models";</script>
+{% endblock %}

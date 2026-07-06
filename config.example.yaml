@@ -1,0 +1,78 @@
+# =========================================================
+# 中转站分组倍率监测 - 多站点配置模板
+# 用法：复制本文件为 config.yaml，按需填写后保存
+# 支持任意数量中转站，每个站点独立配置凭证/间隔/通知
+# =========================================================
+
+# ---------- 多站点列表 ----------
+sites:
+  # ===== 示例站点 1：QAPI 系统 =====
+  - id: "qjxjs_xyz"              # 自动从 base_url 生成，可手填（用于 DB 隔离）
+    name: "QAPI 主站"             # 显示名（可选）
+    system: "qapi"               # newapi / qapi
+    base_url: "https://qjxjs.xyz"
+
+    # --- QAPI 凭证（system=qapi 用）---
+    email: ""
+    password: ""
+    api_key: ""                  # sk-xxx，可选（用于 /v1/models 看模型清单）
+
+    # --- New API 凭证（system=newapi 用，本站不用可留空）---
+    access_token: ""
+    session_cookie: ""
+
+    # --- 该站点的监测策略 ---
+    monitor:
+      interval_minutes: 30
+      watch_groups: []           # 留空=全部；如 ["codex","kiro"]
+      watch_models: []           # 留空=全部；前缀匹配，如 ["gpt-4o","claude"]
+      change_threshold_pct: 0    # 变化幅度低于此百分比忽略，0=任何变化都报
+      notify_on_first_run: false # 首次抓取是否发确认通知
+
+    # --- 该站点的通知渠道（全部 enabled 默认关）---
+    notify:
+      serverchan:
+        enabled: false
+        sendkey: ""
+      telegram:
+        enabled: false
+        bot_token: ""
+        chat_id: ""
+      wecom:
+        enabled: false
+        webhook: ""
+      dingtalk:
+        enabled: false
+        webhook: ""
+        secret: ""
+      email:
+        enabled: false
+        smtp_host: "smtp.qq.com"
+        smtp_port: 465
+        smtp_ssl: true
+        smtp_user: ""
+        smtp_pass: ""
+        from_addr: ""
+        to_addrs: []
+
+  # ===== 示例站点 2：New API 系统（取消注释并填写）=====
+  # - id: "myapi_example_com"
+  #   name: "我的 NewAPI 站"
+  #   system: "newapi"
+  #   base_url: "https://myapi.example.com"
+  #   access_token: ""
+  #   session_cookie: ""
+  #   monitor:
+  #     interval_minutes: 30
+  #     change_threshold_pct: 0
+  #     notify_on_first_run: false
+  #   notify:
+  #     telegram:
+  #       enabled: true
+  #       bot_token: ""
+  #       chat_id: ""
+
+# ---------- 全局日志 ----------
+log:
+  level: INFO                    # DEBUG/INFO/WARNING/ERROR
+  file: ""                       # 留空=仅控制台

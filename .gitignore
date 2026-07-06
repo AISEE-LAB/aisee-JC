@@ -1,0 +1,22 @@
+# 敏感文件
+config.yaml
+state.json
+state.json.tmp
+monitor.log
+*.log
+
+# SQLite（Web 模式数据）
+data.db
+data.db-wal
+data.db-shm
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 备份/临时
+backup_single_site/
+service.log

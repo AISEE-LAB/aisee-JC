@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}倍率监测{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-dot"></span>
+        中转站倍率监测
+      </a>
+      <nav class="nav">
+        <a href="/"            class="{% if active=='dashboard' %}active{% endif %}">仪表盘</a>
+        <a href="/models"      class="{% if active=='models'    %}active{% endif %}">倍率表格</a>
+        <a href="/changes"     class="{% if active=='changes'   %}active{% endif %}">变更历史</a>
+        <a href="/config"      class="{% if active=='config'    %}active{% endif %}">配置</a>
+        <a href="/logs"        class="{% if active=='logs'      %}active{% endif %}">日志</a>
+      </nav>
+      <div class="status-pill" id="global-status">
+        <span class="dot dot-gray"></span>
+        <span class="status-text">加载中…</span>
+      </div>
+    </div>
+    <!-- 站点切换栏 -->
+    <div class="site-tabs" id="site-tabs">
+      <button class="site-tab active" data-site-id="all">🌐 全部站点</button>
+      <!-- 站点标签由 JS 动态填充 -->
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- 通用 Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 通用 Modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="modal-title">标题</h3>
+        <button class="modal-close" data-close>×</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}?v=2"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

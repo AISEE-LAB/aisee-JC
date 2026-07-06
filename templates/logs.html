@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}日志 · 倍率监测{% endblock %}
+
+{% block content %}
+<h1 class="page-title">运行日志</h1>
+<p class="page-sub">脚本运行以来的所有日志，按时间倒序。</p>
+
+<div class="toolbar">
+  <select id="log-level-filter" class="input">
+    <option value="">全部级别</option>
+    <option value="ERROR">ERROR</option>
+    <option value="WARNING">WARNING</option>
+    <option value="INFO">INFO</option>
+    <option value="DEBUG">DEBUG</option>
+  </select>
+  <select id="log-limit" class="input">
+    <option value="100">最近 100 条</option>
+    <option value="200" selected>最近 200 条</option>
+    <option value="500">最近 500 条</option>
+  </select>
+  <button class="btn" id="btn-refresh-logs">刷新</button>
+</div>
+
+<div class="panel">
+  <div class="panel-body no-pad">
+    <table class="data-table log-table" id="logs-table">
+      <thead>
+        <tr>
+          <th class="col-time">时间</th>
+          <th class="col-level">级别</th>
+          <th>消息</th>
+        </tr>
+      </thead>
+      <tbody id="logs-tbody">
+        <tr><td colspan="3" class="empty">加载中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.PAGE = "logs";</script>
+{% endblock %}

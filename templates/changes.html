@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}变更历史 · 倍率监测{% endblock %}
+
+{% block content %}
+<h1 class="page-title">变更历史</h1>
+<p class="page-sub">每一次抓取发现的倍率变化都会记录在这里。</p>
+
+<div class="toolbar">
+  <select id="kind-filter" class="input">
+    <option value="">全部类型</option>
+    <option value="group_ratio">分组倍率</option>
+    <option value="model_ratio">模型倍率</option>
+    <option value="model_added">模型新增</option>
+    <option value="model_removed">模型下架</option>
+  </select>
+  <select id="limit-select" class="input">
+    <option value="50">最近 50 条</option>
+    <option value="100" selected>最近 100 条</option>
+    <option value="500">最近 500 条</option>
+  </select>
+  <button class="btn" id="btn-refresh-changes">刷新</button>
+  <button class="btn btn-danger-ghost" id="btn-reset">重置基准</button>
+</div>
+
+<div class="panel">
+  <div class="panel-body no-pad">
+    <div id="changes-list" class="timeline">
+      <div class="empty">加载中…</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.PAGE = "changes";</script>
+{% endblock %}
