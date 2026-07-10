@@ -10,6 +10,9 @@ data.db
 data.db-wal
 data.db-shm
 
+# Docker 持久化目录（含 config.yaml / data.db）
+data/
+
 # Python
 __pycache__/
 *.pyc

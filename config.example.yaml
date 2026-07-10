@@ -54,6 +54,21 @@ sites:
         smtp_pass: ""
         from_addr: ""
         to_addrs: []
+      bark:                         # iOS 推送
+        enabled: false
+        server: "https://api.day.app"
+        device_key: ""
+        sound: "alert"
+        group: "rate-monitor"
+        icon: ""
+      discord:                      # Discord 频道 Webhook
+        enabled: false
+        webhook: ""
+        username: "倍率监测"
+      feishu:                       # 飞书群机器人
+        enabled: false
+        webhook: ""
+        secret: ""                  # 加签（可选）
 
   # ===== 示例站点 2：New API 系统（取消注释并填写）=====
   # - id: "myapi_example_com"
@@ -76,3 +91,12 @@ sites:
 log:
   level: INFO                    # DEBUG/INFO/WARNING/ERROR
   file: ""                       # 留空=仅控制台
+
+# ---------- 全局访问鉴权（公网部署强烈建议启用）----------
+auth:
+  enabled: false                 # true 启用；false 不鉴权（仅本地用）
+  username: "admin"              # Basic Auth 用户名
+  password: ""                   # Basic Auth 密码（留空则不校验密码登录）
+  token: ""                      # API Token，用 X-Api-Token 头或 ?api_token= 调用 API
+  # 说明：password 与 token 任一非空即可作为校验手段，二者可只配其一。
+  #       /api/health 始终免鉴权，供健康检查使用。

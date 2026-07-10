@@ -14,7 +14,7 @@ import time
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Tuple
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.db")
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.db"))
 
 _lock = threading.Lock()
 

@@ -481,6 +481,12 @@ async function loadConfig() {
       editingSiteIndex = Math.min(editingSiteIndex, sites.length - 1);
       fillConfigForm(sites[editingSiteIndex]);
     }
+    // 填充鉴权表单
+    const auth = data.config.auth || {};
+    $("#auth-enabled").checked = !!auth.enabled;
+    $("#auth-username").value = auth.username || "admin";
+    $("#auth-password").value = (auth.password === "***" ? "" : (auth.password || ""));
+    $("#auth-token").value = (auth.token === "***" ? "" : (auth.token || ""));
   } catch (e) { toast("加载配置失败：" + e.message, "error"); }
 }
 
@@ -592,7 +598,7 @@ function collectEditingSite() {
     else if (["smtp_port"].includes(k)) notify[ch][k] = parseInt(el.value) || 0;
     else {
       // 凭证：留空=不改（保留 ***）
-      const isSecret = ["sendkey", "bot_token", "webhook", "secret", "smtp_pass"].includes(k);
+      const isSecret = ["sendkey", "bot_token", "webhook", "secret", "smtp_pass", "device_key"].includes(k);
       if (isSecret && !el.value) {
         // 保留旧值（在 configBackup 里是 *** 或实际值，保存时后端会回填）
         notify[ch][k] = site.notify?.[ch]?.[k] || "";
@@ -610,11 +616,18 @@ async function saveConfig() {
   btn.disabled = true; btn.textContent = "保存中…";
   try {
     collectEditingSite();
+    // 收集鉴权配置（留空=不改，由后端回填 ***）
+    const auth = {
+      enabled: $("#auth-enabled").checked,
+      username: $("#auth-username").value.trim() || "admin",
+      password: $("#auth-password").value,
+      token: $("#auth-token").value,
+    };
     await api("/api/config", {
       method: "POST",
-      body: JSON.stringify({ sites: configBackup, log: { level: "INFO", file: "" } }),
+      body: JSON.stringify({ sites: configBackup, log: { level: "INFO", file: "" }, auth }),
     });
-    toast("配置已保存（" + configBackup.length + " 个站点）", "success");
+    toast("配置已保存（" + configBackup.length + " 个站点）" + (auth.enabled ? "，鉴权已启用" : ""), "success");
     await loadConfig();
     refreshSitesList();
   } catch (e) { toast("保存失败：" + e.message, "error"); }

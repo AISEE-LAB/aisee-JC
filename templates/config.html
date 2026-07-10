@@ -178,9 +178,64 @@
         <div class="form-row"><label>收件人（逗号分隔）</label><input type="text" class="input" data-field="notify.email.to_addrs" placeholder="a@x.com,b@y.com"></div>
       </fieldset>
 
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.bark.enabled"><span>Bark（iOS 推送）</span></label></legend>
+        <div class="form-row"><label>服务器 <span class="hint">默认官方，可填自建</span></label><input type="text" class="input" data-field="notify.bark.server" placeholder="https://api.day.app"></div>
+        <div class="form-row"><label>Device Key</label><input type="password" class="input" data-field="notify.bark.device_key" placeholder="留空不修改"></div>
+        <div class="form-row-grid">
+          <div class="form-row"><label>铃声</label><input type="text" class="input" data-field="notify.bark.sound" placeholder="alert"></div>
+          <div class="form-row"><label>分组</label><input type="text" class="input" data-field="notify.bark.group" placeholder="rate-monitor"></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.discord.enabled"><span>Discord Webhook</span></label></legend>
+        <div class="form-row"><label>Webhook URL</label><input type="password" class="input" data-field="notify.discord.webhook" placeholder="https://discord.com/api/webhooks/..."></div>
+        <div class="form-row"><label>显示用户名</label><input type="text" class="input" data-field="notify.discord.username" placeholder="倍率监测"></div>
+      </fieldset>
+
+      <fieldset class="channel">
+        <legend><label class="checkbox"><input type="checkbox" data-field="notify.feishu.enabled"><span>飞书群机器人</span></label></legend>
+        <div class="form-row"><label>Webhook URL</label><input type="password" class="input" data-field="notify.feishu.webhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."></div>
+        <div class="form-row"><label>加签 Secret（可选）</label><input type="password" class="input" data-field="notify.feishu.secret" placeholder="留空不修改"></div>
+      </fieldset>
+
     </div>
   </div>
 </form>
+
+<!-- 全局鉴权配置（独立于站点） -->
+<div class="panel" style="margin-top:16px;">
+  <div class="panel-head"><h2>访问鉴权（全局）</h2></div>
+  <div class="panel-body">
+    <p class="page-sub" style="margin-top:0;">启用后访问 Web 与 API 需登录。API 可用 <code>X-Api-Token</code> 头或 <code>?api_token=</code> 参数免登录调用。<code>/api/health</code> 始终免鉴权。</p>
+    <div class="form-row-grid">
+      <div class="form-row">
+        <label class="checkbox">
+          <input type="checkbox" id="auth-enabled">
+          <span>启用访问鉴权</span>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>用户名</label>
+        <input type="text" class="input" id="auth-username" placeholder="admin">
+      </div>
+    </div>
+    <div class="form-row-grid">
+      <div class="form-row">
+        <label>密码 <span class="hint">Basic Auth 用，留空不修改</span></label>
+        <input type="password" class="input" id="auth-password" placeholder="留空不修改">
+      </div>
+      <div class="form-row">
+        <label>API Token <span class="hint">脚本调用用，留空不修改</span></label>
+        <input type="password" class="input" id="auth-token" placeholder="留空不修改">
+      </div>
+    </div>
+    <div class="alert alert-warn" id="auth-tip" style="margin-top:12px;">
+      ⚠️ 启用鉴权后请牢记密码/Token，丢失需手动编辑 <code>config.yaml</code> 重置。
+    </div>
+  </div>
+</div>
 
 <div class="sticky-actions">
   <button type="button" class="btn btn-primary" id="btn-save-config">保存配置</button>

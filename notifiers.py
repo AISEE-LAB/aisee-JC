@@ -1,6 +1,6 @@
 """
 多渠道通知模块。
-支持：Server 酱 / Telegram / 企业微信群机器人 / 钉钉群机器人 / 邮件。
+支持：Server 酱 / Telegram / 企业微信群机器人 / 钉钉群机器人 / 邮件 / Bark / Discord / 飞书。
 所有渠道都设计为「失败不抛异常、返回 (ok, msg)」，避免一个渠道挂掉影响其它。
 """
 from __future__ import annotations
@@ -49,6 +49,18 @@ def send_all(notify_cfg: Dict[str, Any], title: str, content: str) -> List[Tuple
     mail = notify_cfg.get("email", {})
     if mail.get("enabled"):
         results.append(("email", *_send_email(mail, title, text_body)))
+
+    bark = notify_cfg.get("bark", {})
+    if bark.get("enabled"):
+        results.append(("bark", *_send_bark(bark, title, text_body)))
+
+    discord = notify_cfg.get("discord", {})
+    if discord.get("enabled"):
+        results.append(("discord", *_send_discord(discord, title, content)))
+
+    feishu = notify_cfg.get("feishu", {})
+    if feishu.get("enabled"):
+        results.append(("feishu", *_send_feishu(feishu, title, text_body)))
 
     return results
 
@@ -184,5 +196,95 @@ def _send_email(cfg: Dict[str, Any], title: str, text: str) -> Tuple[bool, str]:
                 s.login(user, pwd)
                 s.sendmail(from_addr, to_addrs, msg.as_string())
         return True, "ok"
+    except Exception as e:
+        return False, repr(e)
+
+
+# ----------------- Bark（iOS 推送）-----------------
+def _send_bark(cfg: Dict[str, Any], title: str, text: str) -> Tuple[bool, str]:
+    """Bark 推送。配置：server（如 https://api.day.app 或自建地址）+ device_key。
+    支持自定义铃声/图标，这里走 POST JSON 接口。
+    """
+    server = (cfg.get("server") or "https://api.day.app").strip().rstrip("/")
+    key = (cfg.get("device_key") or "").strip()
+    if not key:
+        return False, "device_key 为空"
+    url = f"{server}/{key}"
+    payload = {
+        "title": title,
+        "body": text,
+        "group": cfg.get("group") or "rate-monitor",
+        "sound": cfg.get("sound") or "alert",
+        "autoCopy": False,
+    }
+    icon = (cfg.get("icon") or "").strip()
+    if icon:
+        payload["icon"] = icon
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        if r.status_code == 200 and data.get("code") in (200, "200", None):
+            # Bark 返回 code=200 表示成功；某些版本无 code 字段，HTTP 200 即视为成功
+            return True, "ok"
+        if r.status_code == 200:
+            return True, "ok"
+        return False, f"{r.status_code} {data or r.text[:200]}"
+    except Exception as e:
+        return False, repr(e)
+
+
+# ----------------- Discord Webhook -----------------
+def _send_discord(cfg: Dict[str, Any], title: str, content: str) -> Tuple[bool, str]:
+    """Discord 频道 Webhook。content 为 markdown 正文，Discord 原生支持 markdown。"""
+    webhook = (cfg.get("webhook") or "").strip()
+    if not webhook:
+        return False, "webhook 为空"
+    # Discord 单条消息上限 2000 字符，超出截断
+    body = f"**{title}**\n\n{content}"
+    if len(body) > 1900:
+        body = body[:1900] + "\n…(截断)"
+    payload = {"content": body, "username": cfg.get("username") or "倍率监测"}
+    try:
+        r = requests.post(webhook, json=payload, timeout=10)
+        # Discord 成功返回 204 No Content（无响应体）
+        if r.status_code in (200, 204):
+            return True, "ok"
+        return False, f"{r.status_code} {r.text[:200]}"
+    except Exception as e:
+        return False, repr(e)
+
+
+# ----------------- 飞书群机器人 -----------------
+def _send_feishu(cfg: Dict[str, Any], title: str, text: str) -> Tuple[bool, str]:
+    """飞书自定义机器人 Webhook。
+    - 无签名：直接 POST webhook
+    - 启用签名：用 secret 生成 sign，放入 payload
+    """
+    webhook = (cfg.get("webhook") or "").strip()
+    if not webhook:
+        return False, "webhook 为空"
+    secret = (cfg.get("secret") or "").strip()
+
+    import time as _t
+    payload: Dict[str, Any] = {
+        "msg_type": "text",
+        "content": {"text": f"【{title}】\n{text}"},
+    }
+    if secret:
+        # 飞书签名算法：timestamp + "\n" + secret -> HmacSHA256，再 base64
+        ts = str(int(_t.time()))
+        sign_str = f"{ts}\n{secret}"
+        hmac_code = hmac.new(sign_str.encode("utf-8"), digestmod=hashlib.sha256).digest()
+        sign = base64.b64encode(hmac_code).decode("utf-8")
+        payload["timestamp"] = ts
+        payload["sign"] = sign
+    try:
+        r = requests.post(webhook, json=payload, timeout=10)
+        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        # 飞书成功返回 {"code":0,"msg":"success"} 或 {"StatusCode":0}
+        code = data.get("code", data.get("StatusCode", -1))
+        if r.status_code == 200 and (code == 0 or code == "0"):
+            return True, "ok"
+        return False, f"{r.status_code} {data or r.text[:200]}"
     except Exception as e:
         return False, repr(e)

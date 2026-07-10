@@ -1,0 +1,31 @@
+# 中转站倍率监测 - Docker Compose 部署
+# 用法：
+#   1. 首次：docker compose up -d
+#   2. 浏览器访问 http://<服务器IP>:5000
+#   3. 配置/数据持久化在 ./data 目录（含 config.yaml 和 data.db）
+#
+# 公网部署务必在配置页启用「访问鉴权」或在此处预设环境变量。
+services:
+  rate-monitor:
+    build: .
+    image: rate-monitor:latest
+    container_name: rate-monitor
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # 配置与数据库持久化（容器重建不丢）
+      - ./data:/app/data
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5000
+      - TZ=Asia/Shanghai
+      # 配置与数据库写入持久化目录
+      - CONFIG_PATH=/app/data/config.yaml
+      - DB_PATH=/app/data/data.db
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

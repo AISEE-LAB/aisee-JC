@@ -12,7 +12,8 @@ import yaml
 import db
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.yaml")
+# 支持环境变量覆盖配置路径（Docker 部署把 config.yaml 放持久化卷里）
+CONFIG_PATH = os.environ.get("CONFIG_PATH", os.path.join(SCRIPT_DIR, "config.yaml"))
 CONFIG_EXAMPLE = os.path.join(SCRIPT_DIR, "config.example.yaml")
 
 
@@ -41,6 +42,16 @@ DEFAULT_NOTIFY = {
         "from_addr": "",
         "to_addrs": [],
     },
+    "bark": {
+        "enabled": False,
+        "server": "https://api.day.app",
+        "device_key": "",
+        "sound": "alert",
+        "group": "rate-monitor",
+        "icon": "",
+    },
+    "discord": {"enabled": False, "webhook": "", "username": "倍率监测"},
+    "feishu": {"enabled": False, "webhook": "", "secret": ""},
 }
 
 

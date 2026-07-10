@@ -1,0 +1,32 @@
+# 构建镜像时排除的文件，减小上下文体积、避免敏感信息进镜像
+config.yaml
+data.db
+data.db-wal
+data.db-shm
+state*.json
+*.log
+monitor.log
+service.log
+
+# 数据目录（运行时挂载，不进镜像）
+data/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 备份与临时
+backup_single_site/
+.git/
+.gitignore
+README.md
+*.bat
+*.ps1
+
+# Docker 自身
+Dockerfile
+docker-compose.yml
+.dockerignore

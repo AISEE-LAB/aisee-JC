@@ -58,6 +58,120 @@ def init_logging() -> None:
 
 
 # =========================================================
+# 访问鉴权（Basic Auth / API Token，可配置开关）
+# =========================================================
+AUTH_SECRET_KEYS = {"password", "token"}  # 保存时回填用的敏感字段
+
+
+def get_auth_cfg() -> Dict[str, Any]:
+    """读取 auth 配置并补默认值。enabled 默认 False，保证向后兼容。"""
+    try:
+        raw = ch.load_config_raw()
+    except Exception:
+        raw = {}
+    auth = raw.get("auth") or {}
+    if not isinstance(auth, dict):
+        auth = {}
+    auth.setdefault("enabled", False)
+    auth.setdefault("username", "admin")
+    auth.setdefault("password", "")
+    auth.setdefault("token", "")
+    return auth
+
+
+def mask_auth_cfg(auth: Dict[str, Any]) -> Dict[str, Any]:
+    """脱敏副本：密码/令牌非空 → ***"""
+    out = dict(auth)
+    for k in AUTH_SECRET_KEYS:
+        if out.get(k):
+            out[k] = "***"
+    return out
+
+
+def restore_auth_secrets(new_auth: Dict[str, Any], old_auth: Dict[str, Any]) -> None:
+    """前端发回的 *** 视为「不改」，用旧值回填。就地修改。"""
+    for k in AUTH_SECRET_KEYS:
+        if new_auth.get(k) == "***":
+            new_auth[k] = old_auth.get(k, "")
+
+
+def check_auth() -> bool:
+    """校验当前请求是否通过鉴权。未启用鉴权时直接放行。
+    支持两种方式：
+    1) HTTP Basic Auth（username + password）
+    2) X-Api-Token 请求头或 ?api_token= 查询参数（token）
+    任一通过即可。
+    """
+    auth_cfg = get_auth_cfg()
+    if not auth_cfg.get("enabled"):
+        return True
+    user = auth_cfg.get("username") or "admin"
+    pwd = auth_cfg.get("password") or ""
+    token = (auth_cfg.get("token") or "").strip()
+
+    # 方式 2：Token（优先，便于脚本/外部调用）
+    if token:
+        req_token = request.headers.get("X-Api-Token") or request.args.get("api_token") or ""
+        if req_token and req_token == token:
+            return True
+
+    # 方式 1：Basic Auth
+    if pwd:
+        auth_hdr = request.headers.get("Authorization", "")
+        if auth_hdr.startswith("Basic "):
+            import base64 as _b64
+            try:
+                decoded = _b64.b64decode(auth_hdr[6:]).decode("utf-8")
+                u, _, p = decoded.partition(":")
+                if u == user and p == pwd:
+                    return True
+            except Exception:
+                pass
+    return False
+
+
+@app.before_request
+def _require_auth() -> Any:
+    """全局鉴权钩子。未通过返回 401，浏览器会弹出 Basic Auth 登录框。
+    /api/health 与静态资源免鉴权，供健康检查与容器探针使用。
+    """
+    # 健康检查端点免鉴权
+    if request.path == "/api/health":
+        return None
+    if check_auth():
+        return None
+    # 浏览器访问返回 401 + WWW-Authenticate 触发登录框；API 调用返回 JSON
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "error": "未授权：需要登录或提供有效 token"}), 401
+    resp = app.make_response(("Unauthorized", 401))
+    resp.headers["WWW-Authenticate"] = 'Basic realm="rate-monitor"'
+    return resp
+
+
+@app.route("/api/health")
+def api_health():
+    """健康检查端点（免鉴权）。供 Docker healthcheck / uptime 监控使用。"""
+    try:
+        sites = ch.get_sites_cfg()
+        return jsonify({"ok": True, "status": "healthy", "sites": len(sites)}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "status": "unhealthy", "error": str(e)}), 500
+
+
+@app.route("/api/auth")
+def api_auth_status():
+    """返回当前鉴权状态（是否启用、是否已登录）。不含敏感字段。"""
+    auth_cfg = get_auth_cfg()
+    return jsonify({
+        "enabled": bool(auth_cfg.get("enabled")),
+        "username": auth_cfg.get("username", "admin"),
+        "has_password": bool(auth_cfg.get("password")),
+        "has_token": bool(auth_cfg.get("token")),
+        "logged_in": check_auth() or not auth_cfg.get("enabled"),
+    })
+
+
+# =========================================================
 # 配置：脱敏（多站点版）
 # =========================================================
 SITE_SECRET_KEYS = {"access_token", "session_cookie", "password", "api_key"}
@@ -67,6 +181,9 @@ NOTIFY_SECRET_KEYS = {
     "wecom": {"webhook"},
     "dingtalk": {"webhook", "secret"},
     "email": {"smtp_pass"},
+    "bark": {"device_key"},
+    "discord": {"webhook"},
+    "feishu": {"webhook", "secret"},
 }
 
 
@@ -421,9 +538,14 @@ def api_notifications():
 def api_config_get():
     raw = ch.load_config_raw()
     sites = ch.normalize_sites(raw)
-    # 重组返回结构：返回规范化后的 sites + log
+    auth = get_auth_cfg()
+    # 重组返回结构：返回规范化后的 sites + log + auth（脱敏）
     return jsonify({
-        "config": {"sites": sites, "log": raw.get("log", {"level": "INFO", "file": ""})},
+        "config": {
+            "sites": sites,
+            "log": raw.get("log", {"level": "INFO", "file": ""}),
+            "auth": mask_auth_cfg(auth),
+        },
         "has_yaml": os.path.exists(ch.CONFIG_PATH),
     })
 
@@ -441,17 +563,29 @@ def api_config_save():
     except Exception:
         old_sites = []
 
-    # 重组 new_cfg，保留 log
+    # auth 段处理：回填 *** 凭证
+    old_auth = get_auth_cfg()
+    new_auth = data.get("auth") or {}
+    if not isinstance(new_auth, dict):
+        new_auth = {}
+    new_auth.setdefault("enabled", False)
+    new_auth.setdefault("username", "admin")
+    new_auth.setdefault("password", "")
+    new_auth.setdefault("token", "")
+    restore_auth_secrets(new_auth, old_auth)
+
+    # 重组 new_cfg，保留 log + auth
     new_cfg = {
         "sites": new_sites,
         "log": data.get("log") or old_raw.get("log", {"level": "INFO", "file": ""}),
+        "auth": new_auth,
     }
     # 回填 *** 凭证
     restore_secrets(new_cfg, {"sites": old_sites})
 
     try:
         ch.save_config_raw(new_cfg)
-        log.info("配置已保存（%d 个站点）", len(new_sites))
+        log.info("配置已保存（%d 个站点，鉴权=%s）", len(new_sites), "开" if new_auth.get("enabled") else "关")
         reschedule()
         return jsonify({"ok": True})
     except Exception as e:

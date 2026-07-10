@@ -7,7 +7,9 @@
 - 🌐 **多站点**：一个实例同时监测多个中转站，每站独立配置凭证/间隔/通知
 - 🎯 **双系统支持**：New API（access_token）+ QAPI（账号密码登录拿 JWT）
 - 📊 **可视化仪表盘**：全局概览 + 单站点下钻，倍率趋势图
-- 🔔 **5 种通知渠道**：Server 酱 / Telegram / 企业微信 / 钉钉 / 邮件
+- 🔔 **8 种通知渠道**：Server 酱 / Telegram / 企业微信 / 钉钉 / 邮件 / Bark / Discord / 飞书
+- 🔒 **访问鉴权**：可选 Basic Auth + API Token，公网部署安全
+- 🐳 **Docker 一键部署**：内置 Dockerfile + docker-compose，数据持久化
 - 🗄️ **历史隔离**：SQLite 按站点隔离数据，独立趋势/变更记录
 - ⚡ **自动调度**：后端 APScheduler 定时抓取，按各站点配置的间隔
 
@@ -54,6 +56,39 @@ python app.py
 ### 5. 抓取
 
 仪表盘点「立即抓取」→ 首次建立基准 → 之后按间隔自动抓取，**只有变化才告警**。
+
+## Docker 部署（推荐公网用）
+
+```bash
+docker compose up -d            # 构建并后台启动
+docker compose logs -f          # 查看日志
+docker compose down             # 停止
+```
+
+- 访问 `http://<服务器IP>:5000`
+- 配置与数据持久化在 `./data/` 目录（含 `config.yaml` 和 `data.db`），容器重建不丢
+- 内置健康检查：`GET /api/health`（免鉴权，供 Docker / uptime 监控探针）
+- **公网部署务必启用访问鉴权**（见下）
+
+## 访问鉴权（公网部署强烈建议）
+
+配置页底部「访问鉴权（全局）」区域，或直接编辑 `config.yaml`：
+
+```yaml
+auth:
+  enabled: true              # 启用
+  username: "admin"          # Basic Auth 用户名
+  password: "your-password"  # Basic Auth 密码
+  token: "your-api-token"    # API Token（脚本调用用）
+```
+
+启用后：
+- **浏览器访问**：弹出 Basic Auth 登录框，输入 username + password
+- **API 调用**：两种方式任选其一
+  - `X-Api-Token: your-api-token` 请求头
+  - `?api_token=your-api-token` 查询参数
+- `/api/health` 始终免鉴权（供健康检查）
+- password 与 token 可只配其一，二者任一非空即可作为校验手段
 
 ## 配置结构（config.yaml）
 
@@ -112,18 +147,21 @@ APScheduler（取所有站点 interval 最小值为全局节奏）
 
 ```
 yy/
-├── app.py                 # Flask + APScheduler + 多站点编排
-├── config_helper.py       # 配置规范化 + 兼容转换
+├── app.py                 # Flask + APScheduler + 多站点编排 + 鉴权
+├── config_helper.py       # 配置规范化 + 兼容转换 + 环境变量路径
 ├── monitor.py             # 抓取/比对核心（CLI 多站点 + Web 复用）
 ├── qapi_client.py         # QAPI(sub2api) 客户端
-├── notifiers.py           # 5 渠道通知
+├── notifiers.py           # 8 渠道通知
 ├── db.py                  # SQLite 数据层（按 site_id 隔离）
 ├── config.example.yaml    # 多站点配置模板
 ├── config.yaml            # 运行时配置（gitignore）
 ├── data.db                # SQLite（gitignore）
 ├── templates/             # 6 个页面
 ├── static/                # CSS + JS
-├── run_web.bat            # 双击启动
+├── Dockerfile             # 容器镜像构建
+├── docker-compose.yml     # 一键部署（数据持久化）
+├── .dockerignore          # 构建排除
+├── run_web.bat            # 双击启动（本地）
 └── backup_single_site/    # 改造前的单站点版本备份
 ```
 
@@ -133,6 +171,8 @@ yy/
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| GET | `/api/health` | 健康检查（免鉴权，供 Docker/监控探针） |
+| GET | `/api/auth` | 当前鉴权状态（是否启用/已登录） |
 | GET | `/api/dashboard[?site_id=]` | 仪表盘（无参=全局概览，带参=单站点） |
 | GET | `/api/models?site_id=&q=&sort=` | 模型列表 |
 | GET | `/api/models/<name>/history?site_id=` | 单模型趋势 |
@@ -186,8 +226,10 @@ A：仪表盘点「测试通知」，日志页看每个渠道的 ✓/✗。
 ## 安全提示
 
 - `config.yaml` / `data.db` 含敏感信息，已在 `.gitignore`
-- 服务设计为本地单机，**未做访问鉴权**，公网部署需自行加防护
+- **公网部署务必启用访问鉴权**（配置页 → 访问鉴权，或编辑 `config.yaml` 的 `auth` 段）
+- 启用鉴权后，API 调用需带 `X-Api-Token` 头或 `?api_token=` 参数
 - 凭证建议定期轮换
+- Docker 部署时 `./data/` 目录含配置与数据库，注意目录权限
 
 ## 兼容性
 
