@@ -59,6 +59,24 @@ python app.py
 
 ## Docker 部署（推荐公网用）
 
+### 方式一：拉取 GitHub 官方镜像（最简单，无需构建）
+
+每次推送代码，GitHub Actions 会自动构建多架构镜像并发布到 GHCR：
+
+```bash
+docker pull ghcr.io/aisee-lab/aisee-jc:latest
+docker run -d --name rate-monitor --restart unless-stopped \
+  -p 5000:5000 \
+  -v $PWD/data:/app/data \
+  -e CONFIG_PATH=/app/data/config.yaml \
+  -e DB_PATH=/app/data/data.db \
+  ghcr.io/aisee-lab/aisee-jc:latest
+```
+
+访问 `http://<服务器IP>:5000`，配置与数据持久化在 `./data/` 目录。
+
+### 方式二：本地构建（自行修改代码后用）
+
 ```bash
 docker compose up -d            # 构建并后台启动
 docker compose logs -f          # 查看日志
